@@ -12,6 +12,7 @@ import com.ccbuluo.business.platform.allocateapply.dto.AllocateApplyDTO;
 import com.ccbuluo.business.platform.allocateapply.dto.AllocateapplyDetailDTO;
 import com.ccbuluo.business.platform.allocateapply.service.applyhandle.ApplyHandleContext;
 import com.ccbuluo.business.platform.allocateapply.service.applyhandle.PurchaseApplyHandleStrategy;
+import com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle.ApplyHandleAndCancelContext;
 import com.ccbuluo.business.platform.claimorder.dao.ClaimOrderDao;
 import com.ccbuluo.business.platform.claimorder.service.ClaimOrderService;
 import com.ccbuluo.business.platform.custmanager.dao.BizServiceCustmanagerDao;
@@ -121,7 +122,7 @@ public class AllocateApplyServiceImpl implements AllocateApplyService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void createAllocateApply(AllocateApplyDTO allocateApplyDTO) {
+    public void createAllocateApply(AllocateApplyDTO allocateApplyDTO) throws IllegalAccessException, InstantiationException, ClassNotFoundException {
         String processType = allocateApplyDTO.getProcessType();
         // 如果是退款类型，没有入库机构，不需要查询机构类型
         if(!AllocateApplyTypeEnum.REFUND.name().equals(processType)){
@@ -212,8 +213,12 @@ public class AllocateApplyServiceImpl implements AllocateApplyService {
         batchInsertForapplyDetailList(allocateApplyDTO, loggedUserId, processType);
         // 已经自动处理了，调用 申请构建计划的方法
         if(AllocateApplyTypeEnum.BARTER.name().equals(processType) || AllocateApplyTypeEnum.REFUND.name().equals(processType)){
-            applyHandleContext.applyHandle(allocateApplyDTO.getApplyNo());
+//            applyHandleContext.applyHandle(allocateApplyDTO.getApplyNo());
+            ApplyHandleAndCancelContext applyHandleContext = new ApplyHandleAndCancelContext(AllocateApplyTypeEnum.BARTER);
+            applyHandleContext.getApplyHandleResult(allocateApplyDTO.getApplyNo());
         }
+
+
 
     }
     /**
@@ -479,6 +484,7 @@ public class AllocateApplyServiceImpl implements AllocateApplyService {
         saveProcessApply(processApplyDTO.getProcessApplyDetailDTO());
         // 生成出入库计划
         applyHandleContext.applyHandle(processApplyDTO.getApplyNo());
+
     }
 
     /**

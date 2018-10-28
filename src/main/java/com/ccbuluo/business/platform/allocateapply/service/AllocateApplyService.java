@@ -27,7 +27,7 @@ public interface AllocateApplyService {
      * @author zhangkangjian
      * @date 2018-08-07 20:54:24
      */
-    void createAllocateApply(AllocateApplyDTO allocateApplyDTO);
+    void createAllocateApply(AllocateApplyDTO allocateApplyDTO) throws IllegalAccessException, InstantiationException, ClassNotFoundException;
     /**
      * 查询申请单详情
      * @param applyNo 申请单号

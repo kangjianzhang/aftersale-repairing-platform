@@ -52,6 +52,10 @@ base:
   custmanager: "SC000003"
   #客户经理角色code
   custmanagerrolecode: "SH000007"
+  purchase: "com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle.PurchaseApplyHandle"
+  samelevel: "com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle.SameLevelApplyHandle"
+  barter: "com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle.BarterApplyHandle"
+  refund: "com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle.RefundApplyHandle"
 
   #小程序基础相关配置
   mini:

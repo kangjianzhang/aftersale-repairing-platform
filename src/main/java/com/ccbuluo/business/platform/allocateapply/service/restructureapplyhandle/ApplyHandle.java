@@ -1,14 +1,11 @@
-package com.ccbuluo.business.platform.allocateapply.service.applyhandle;
+package com.ccbuluo.business.platform.allocateapply.service.restructureapplyhandle;
 
 import com.auth0.jwt.internal.org.apache.commons.lang3.tuple.Pair;
 import com.ccbuluo.business.constants.*;
 import com.ccbuluo.business.entity.*;
-import com.ccbuluo.business.entity.BizAllocateApply.AllocateApplyTypeEnum;
+import com.ccbuluo.business.platform.allocateapply.dao.BizAllocateApplyDao;
 import com.ccbuluo.business.platform.allocateapply.dao.BizAllocateapplyDetailDao;
 import com.ccbuluo.business.platform.allocateapply.dto.AllocateapplyDetailBO;
-import com.ccbuluo.business.platform.allocateapply.dto.CheckStockQuantityDTO;
-import com.ccbuluo.business.platform.allocateapply.dto.ProductStockInfoDTO;
-import com.ccbuluo.business.platform.allocateapply.service.AllocateApplyService;
 import com.ccbuluo.business.platform.inputstockplan.dao.BizInstockplanDetailDao;
 import com.ccbuluo.business.platform.order.dao.BizAllocateTradeorderDao;
 import com.ccbuluo.business.platform.outstockplan.dao.BizOutstockplanDetailDao;
@@ -17,16 +14,13 @@ import com.ccbuluo.business.platform.stockdetail.dao.BizStockDetailDao;
 import com.ccbuluo.business.platform.stockdetail.dao.ProblemStockDetailDao;
 import com.ccbuluo.business.platform.stockdetail.dto.StockBizStockDetailDTO;
 import com.ccbuluo.business.platform.storehouse.dao.BizServiceStorehouseDao;
-import com.ccbuluo.business.platform.storehouse.dto.QueryStorehouseDTO;
 import com.ccbuluo.core.common.UserHolder;
 import com.ccbuluo.core.exception.CommonException;
 import com.ccbuluo.http.StatusDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.*;
@@ -37,10 +31,9 @@ import java.util.stream.Collectors;
  *
  * @author weijb
  * @version v1.0.0
- * @date 2018-08-13 18:09:03
+ * @date 2018-08-13 19:26:33
  */
-@Service
-public class DefaultApplyHandleStrategy implements ApplyHandleStrategy {
+public abstract class ApplyHandle {
 
     @Resource
     private UserHolder userHolder;
@@ -60,19 +53,16 @@ public class DefaultApplyHandleStrategy implements ApplyHandleStrategy {
     BizInstockplanDetailDao bizInstockplanDetailDao;
     @Autowired
     ProblemStockDetailDao problemStockDetailDao;
+    @Resource
+    private BizAllocateApplyDao bizAllocateApplyDao;
 
-    Logger logger = LoggerFactory.getLogger(getClass());
 
     /**
      *  申请处理
-     * @param ba 申请单
-     * @author weijb
+     * @param applyNo 申请单
      * @date 2018-08-08 10:55:41
      */
-    @Override
-    public StatusDto applyHandle(BizAllocateApply ba){
-        return StatusDto.buildSuccessStatusDto("申请处理成功！");
-    }
+    abstract StatusDto applyHandle(String applyNo);
 
     /**
      *  申请撤销
@@ -80,9 +70,20 @@ public class DefaultApplyHandleStrategy implements ApplyHandleStrategy {
      * @author weijb
      * @date 2018-08-11 13:35:41
      */
-    @Override
-    public StatusDto cancelApply(String applyNo){
-        return StatusDto.buildSuccessStatusDto("申请撤销成功！");
+    abstract StatusDto cancelApply(String applyNo);
+
+    /**
+     * 根据申请单编号查询申请详细信息
+     * @param applyNo 申请单编号
+     * @author weijb
+     * @date 2018-10-28 13:35:41
+     */
+    public BizAllocateApply getBizAllocateApply(String applyNo){
+        BizAllocateApply bizAllocateApply =  bizAllocateApplyDao.getByNo(applyNo);
+        if (null == bizAllocateApply) {
+            throw new CommonException(Constants.ERROR_CODE, "申请单不存在！");
+        }
+        return bizAllocateApply;
     }
 
     /**
@@ -173,7 +174,7 @@ public class DefaultApplyHandleStrategy implements ApplyHandleStrategy {
      * @author weijb
      * @date 2018-08-11 13:35:41
      */
-    public Pair<List<BizOutstockplanDetail>, List<BizInstockplanDetail>> buildOutAndInstockplanDetail(List<AllocateapplyDetailBO> details, List<BizStockDetail> stockDetails, AllocateApplyTypeEnum applyTypeEnum, List<RelOrdstockOccupy> relOrdstockOccupies){
+    public Pair<List<BizOutstockplanDetail>, List<BizInstockplanDetail>> buildOutAndInstockplanDetail(List<AllocateapplyDetailBO> details, List<BizStockDetail> stockDetails, BizAllocateApply.AllocateApplyTypeEnum applyTypeEnum, List<RelOrdstockOccupy> relOrdstockOccupies){
         return null;
     }
 
@@ -235,23 +236,23 @@ public class DefaultApplyHandleStrategy implements ApplyHandleStrategy {
     public String getProductOrgNo(BizAllocateApply ba){
         String sellerOrgno = "";
         // 平台调拨
-        if(AllocateApplyTypeEnum.PLATFORMALLOCATE.toString().equals(ba.getApplyType())){
+        if(BizAllocateApply.AllocateApplyTypeEnum.PLATFORMALLOCATE.toString().equals(ba.getApplyType())){
             sellerOrgno = ba.getOutstockOrgno();
         }
         // 平级调拨（服务间的调拨）
-        if(AllocateApplyTypeEnum.SAMELEVEL.toString().equals(ba.getApplyType())){
+        if(BizAllocateApply.AllocateApplyTypeEnum.SAMELEVEL.toString().equals(ba.getApplyType())){
             sellerOrgno = ba.getOutstockOrgno();
         }
         // 平级直调
-        if(AllocateApplyTypeEnum.DIRECTALLOCATE.toString().equals(ba.getApplyType())){
+        if(BizAllocateApply.AllocateApplyTypeEnum.DIRECTALLOCATE.toString().equals(ba.getApplyType())){
             sellerOrgno = BusinessPropertyHolder.ORGCODE_AFTERSALE_PLATFORM;//  平台的机构编号
         }
         // 商品换货
-        if(AllocateApplyTypeEnum.BARTER.toString().equals(ba.getApplyType())){
+        if(BizAllocateApply.AllocateApplyTypeEnum.BARTER.toString().equals(ba.getApplyType())){
             sellerOrgno = ba.getApplyorgNo();//  发起申请的机构编号
         }
         // 退货
-        if(AllocateApplyTypeEnum.REFUND.toString().equals(ba.getApplyType())){
+        if(BizAllocateApply.AllocateApplyTypeEnum.REFUND.toString().equals(ba.getApplyType())){
             sellerOrgno =  ba.getApplyorgNo();//  发起申请的机构编号
         }
         return sellerOrgno;
